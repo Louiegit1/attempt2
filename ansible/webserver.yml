@@ -1,0 +1,27 @@
+---
+- name: Configure Web Server
+  hosts: webserver
+  become: yes
+  tasks:
+    - name: Update apt cache and install Nginx & PHP
+      apt:
+        name:
+          - nginx
+          - php-fpm
+          - php-mysql
+        state: present
+        update_cache: yes
+
+    - name: Ensure Nginx service is running
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Deploy Web Application Index File
+      copy:
+        src: ./index.php
+        dest: /var/www/html/index.php
+        owner: www-data
+        group: www-data
+        mode: '0644'

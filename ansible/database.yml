@@ -1,0 +1,74 @@
+---
+- name: Configure MySQL Database Server
+  hosts: dbservers
+  become: yes
+  vars:
+    db_name: "StudentDB"
+    db_user: "studentuser"
+    db_pass: "MySecurePassword123!"
+
+  tasks:
+    - name: Install MySQL Server and Python MySQL driver
+      apt:
+        name:
+          - mysql-server
+          - python3-pymysql
+        state: present
+        update_cache: yes
+
+    - name: Ensure MySQL Service is Running
+      service:
+        name: mysql
+        state: started
+        enabled: yes
+
+    - name: Allow Remote Connections to MySQL
+      lineinfile:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regexp: '^bind-address'
+        line: 'bind-address = 0.0.0.0'
+      notify: Restart MySQL
+
+    - name: Create StudentDB Database
+      mysql_db:
+        name: "{{ db_name }}"
+        state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Create Students Table
+      mysql_query:
+        login_db: "{{ db_name }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        query: |
+          CREATE TABLE IF NOT EXISTS Students (
+            StudentID INT PRIMARY KEY,
+            StudentName VARCHAR(50),
+            CourseName VARCHAR(100),
+            DeploymentDate DATE
+          );
+
+    - name: Insert Sample Records (Louie & Friend)
+      mysql_query:
+        login_db: "{{ db_name }}"
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        query: |
+          INSERT INTO Students (StudentID, StudentName, CourseName, DeploymentDate)
+          VALUES 
+            (1001, 'Louie Poland', 'CS7504 Security for DevOps', '2026-08-01'),
+            (1002, 'Ravi Kumar', 'CS7504 Security for DevOps', '2026-08-01')
+          ON DUPLICATE KEY UPDATE StudentName=VALUES(StudentName);
+
+    - name: Create Database User with Remote Access
+      mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_pass }}"
+        priv: 'StudentDB.*:ALL'
+        host: '%'
+        state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+  handlers:
+    - name: Restart MySQL
+      service:
+        name: mysql
+        state: restarted

@@ -1,0 +1,5 @@
+resource_group_name  = "rg-cs7504-assignment1"
+location             = "japaneast"
+admin_username       = "azureuser"
+admin_password       = "MySecurePassword123!"
+key_vault_secret_val = "MySecurePassword123"
